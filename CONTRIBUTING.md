@@ -1,4 +1,57 @@
-# Panduan Kontribusi Solen Browser
+# Solen Browser Contribution Guide
+
+*(Scroll down for Bahasa Indonesia)*
+
+Thank you for your interest in contributing to Solen Browser! This application is developed with strict controls to ensure quality, design consistency, and codebase security.
+
+## 🔒 General Rules
+
+In accordance with `LICENSE.md`, this project is *proprietary*. **Only the Principal Creator and Approved Contributors** are allowed to modify the code directly.
+
+### How to Become an Approved Contributor?
+1. You must obtain written permission or be directly invited by the Principal Creator.
+2. You must understand our primary technology stack: **Tauri**, **React**, **TypeScript**, **Zustand**, and **Rust**.
+3. Have a strong understanding of modern design principles (UI/UX) embraced by Solen (glassmorphism, micro-animations, rich typography).
+
+## 💻 Code & Development Standards
+
+If you are an approved contributor, please follow these guidelines when writing code:
+
+### 1. TypeScript / React Style
+- Use **Functional Components** and **React Hooks** exclusively. Do not use Class Components.
+- Use TypeScript features (Interfaces, Types) strictly. Avoid using the `any` type whenever possible.
+- Extract styling if it gets too long, but maximize the use of built-in CSS Variables (Design Tokens) from `index.css` (e.g., `var(--bg-primary)`, `var(--space-2)`).
+- The use of TailwindCSS is strictly prohibited unless agreed upon for specific modules. We use inline Vanilla CSS and external stylesheets for absolute design control.
+
+### 2. State Management
+- Use **Zustand** (`src/store/useBrowserStore.ts`) as the Single Source of Truth for global state.
+- Avoid passing state between distant components using `props drilling`. Use the Store if the data is needed by more than two levels of components.
+
+### 3. Backend (Rust)
+- Backend components in `src-tauri` are intended to bridge the Native OS system (macOS WKWebView) and handle file system operations or proxies during development on Linux.
+- Ensure Rust code is handled safely using `Result` and does not easily trigger `panic!`.
+
+## 🌿 Git Workflow
+
+1. **Branching**:
+   - Never make changes directly to `main`.
+   - Create a new branch for each feature or fix. Naming format: `feature/feature-name` or `fix/bug-description`.
+2. **Commit**:
+   - Use descriptive and structured commit formats (e.g., `feat: add workspace modal` or `fix: resolve proxy loop`).
+3. **Pull Requests (PR)**:
+   - Create PRs explaining in detail what was changed, the purpose of the change, and attach screenshots or videos (if there are UI changes).
+   - PRs will be reviewed by the Principal Creator before merging.
+
+## 🤝 Copyright Agreement
+By submitting a Pull Request or any code to this project, you fully agree that your work becomes part of the Solen project and complies with the license stated in `LICENSE.md`.
+
+<br>
+<br>
+
+---
+---
+
+# Panduan Kontribusi Solen Browser (Bahasa Indonesia)
 
 Terima kasih atas minat Anda untuk berkontribusi pada Solen Browser! Aplikasi ini dikembangkan dengan kontrol yang sangat ketat untuk memastikan kualitas, konsistensi desain, dan keamanan basis kode.
 

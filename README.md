@@ -1,5 +1,66 @@
 # Solen Browser
 
+*(Scroll down for Bahasa Indonesia)*
+
+Solen is a next-generation browser featuring a modern, fast design integrated with a smart agent assistant. Built using **Tauri**, **React**, and **Rust**, Solen offers native performance (especially on macOS using `WKWebView`) with a stunning and feature-rich user interface.
+
+## ✨ Key Features
+- **Workspace Management**: Separate your work contexts (e.g., Development, Research, Media) into different environments.
+- **Dynamic Appearance**: Supports Dark Mode and Light Mode with custom accent colors per workspace.
+- **Premium Design**: Crafted with glassmorphism, micro-animations, and modern layouts.
+- **Smart Search**: Direct integration with various search engines (Bing, Google, DuckDuckGo).
+
+## 🚀 How to Run on Other Devices
+
+To develop or run Solen on your computer, you need to install several system prerequisites first.
+
+### 1. Prerequisites
+Ensure you have the following software installed:
+- **Node.js** (Version 18 or newer) & `npm`.
+- **Rust** & **Cargo** (Use [rustup](https://rustup.rs/)).
+- **Tauri Dependencies**:
+  - **macOS**: Xcode Command Line Tools (`xcode-select --install`).
+  - **Linux (Ubuntu/Debian)**: 
+    ```bash
+    sudo apt update
+    sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+    ```
+
+### 2. Installation
+Clone this repository, navigate to the project directory, and install Node.js dependencies:
+```bash
+git clone <your-repo-url>
+cd Solen
+npm install
+```
+
+### 3. Running Development Mode
+To run the application in development mode (with hot-reload for React):
+```bash
+npm run dev
+```
+*Note: On the first run, Cargo will download and compile the Rust backend, which may take a few minutes.*
+
+### 4. Build for Production
+To build the application into a standalone binary (`.app` on macOS, `.deb`/`.AppImage` on Linux):
+```bash
+npm run build
+npm run tauri build
+```
+
+---
+
+## 📄 License & Contribution
+This project uses a custom proprietary license. Only the original creator and approved contributors are allowed to modify the code. Please read [LICENSE.md](LICENSE.md) for licensing details and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution rules.
+
+<br>
+<br>
+
+---
+---
+
+# Solen Browser (Bahasa Indonesia)
+
 Solen adalah browser masa depan dengan desain modern, cepat, dan terintegrasi dengan asisten agen cerdas. Dibangun menggunakan teknologi **Tauri**, **React**, dan **Rust**, Solen menawarkan performa *native* (khususnya di macOS menggunakan `WKWebView`) dengan antarmuka pengguna yang sangat memukau dan kaya fitur.
 
 ## ✨ Fitur Utama
