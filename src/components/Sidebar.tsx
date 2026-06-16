@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PanelLeftClose, PanelLeftOpen, Plus, Sun, Moon, Settings } from 'lucide-react';
 import WorkspaceSelector from './WorkspaceSelector';
+import WorkspaceModal from './WorkspaceModal';
 import TabItem from './TabItem';
 import ContextMenu from './ContextMenu';
-import { useBrowserStore } from '../store/useBrowserStore';
+import { useBrowserStore, Workspace } from '../store/useBrowserStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface SidebarProps {
   isCompact: boolean;
@@ -12,9 +14,27 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
-  const { workspaces, activeWorkspaceId, tabs, activeTabIds, addTab, theme, toggleTheme, setActiveView } = useBrowserStore();
+  const { workspaces, activeWorkspaceId, tabs, activeTabIds, theme, toggleTheme, setActiveView } = useBrowserStore();
+  const { t } = useTranslation();
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, isOpen: boolean, tabId: string | null }>({ x: 0, y: 0, isOpen: false, tabId: null });
   const [isNewTabPressed, setIsNewTabPressed] = useState(false);
+
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | undefined>(undefined);
+
+  const openCreateModal = () => {
+    setModalMode('create');
+    setEditingWorkspace(undefined);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (workspace: Workspace) => {
+    setModalMode('edit');
+    setEditingWorkspace(workspace);
+    setIsModalOpen(true);
+  };
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
   const rawTabs = tabs[activeWorkspaceId] || [];
@@ -42,13 +62,13 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
         }}
       >
         <div className="sidebar-header" style={{ justifyContent: isCompact ? 'center' : 'space-between' }}>
-          {!isCompact && <span className="sidebar-title">Solen</span>}
-          <button onClick={toggleCompact} className="icon-button" title="Toggle Sidebar (Cmd+B)">
+          {!isCompact && <span className="sidebar-title">{t('appTitle')}</span>}
+          <button onClick={toggleCompact} className="icon-button" title={t('toggleSidebar')}>
             {isCompact ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
           </button>
         </div>
 
-        <WorkspaceSelector isCompact={isCompact} />
+        <WorkspaceSelector isCompact={isCompact} onEditWorkspace={openEditModal} />
 
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: '4px' }}>
           <AnimatePresence initial={false}>
@@ -73,7 +93,7 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
 
           {currentTabs.length === 0 && !isCompact && (
             <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9em', marginTop: 'var(--space-8)' }}>
-              Belum ada tab terbuka
+              {t('noOpenTabs')}
             </div>
           )}
         </div>
@@ -97,7 +117,7 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
               border: '1.5px solid var(--border-subtle)',
               color: 'var(--text-primary)'
             }}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            title={theme === 'dark' ? t('switchToLightMode') : t('switchToDarkMode')}
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -113,7 +133,7 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
               border: '1.5px solid var(--border-subtle)',
               color: 'var(--text-primary)'
             }}
-            title="Pengaturan"
+            title={t('settings')}
           >
             <Settings size={16} />
           </button>
@@ -122,7 +142,7 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
             onMouseDown={() => setIsNewTabPressed(true)}
             onMouseUp={() => setIsNewTabPressed(false)}
             onMouseLeave={() => setIsNewTabPressed(false)}
-            onClick={() => addTab(activeWorkspaceId || '')}
+            onClick={openCreateModal}
             style={{ 
               color: activeWorkspace ? 'var(--bg-primary)' : 'var(--text-primary)',
               display: 'flex',
@@ -144,10 +164,10 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
               transition: 'all 0.1s ease',
               margin: 0
             }}
-            title="New Tab (Cmd+T)"
+            title={t('createWorkspace')}
           >
             <Plus size={18} color={activeWorkspace ? "var(--bg-primary)" : "var(--text-primary)"} style={{ flexShrink: 0 }} />
-            {!isCompact && <span>New Tab</span>}
+            {!isCompact && <span>{t('createWorkspace')}</span>}
           </button>
         </div>
       </motion.aside>
@@ -158,6 +178,13 @@ export default function Sidebar({ isCompact, toggleCompact }: SidebarProps) {
         isOpen={contextMenu.isOpen} 
         tabId={contextMenu.tabId}
         onClose={() => setContextMenu({ ...contextMenu, isOpen: false })} 
+      />
+
+      <WorkspaceModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        mode={modalMode}
+        workspace={editingWorkspace}
       />
     </>
   );

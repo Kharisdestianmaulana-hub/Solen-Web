@@ -10,6 +10,7 @@ export interface Tab {
   history: string[];
   historyIndex: number;
   isPinned?: boolean;
+  refreshCount?: number;
 }
 
 export interface Workspace {
@@ -17,6 +18,18 @@ export interface Workspace {
   name: string;
   accentColor: string;
   homepage?: string;
+}
+
+export interface DownloadItem {
+  id: string;
+  filename: string;
+  url: string;
+  savePath?: string;
+  progress: number;
+  total?: number;
+  status: 'pending' | 'downloading' | 'completed' | 'error';
+  error?: string;
+  createdAt: number;
 }
 
 type RenderMode = 'native' | 'proxy';
@@ -34,6 +47,8 @@ interface BrowserState {
   workspacePage: number;
   searchEngine: 'google' | 'duckduckgo' | 'bing';
   activeView: 'browser' | 'settings';
+  downloadPath: string;
+  downloads: DownloadItem[];
 
   // Content area rect for native mode
   contentRect: { x: number; y: number; width: number; height: number } | null;
@@ -49,9 +64,11 @@ interface BrowserState {
   toggleTheme: () => void;
 
   // Navigation
-  navigateTab: (workspaceId: string, tabId: string, url: string) => void;
+  navigateTab: (workspaceId: string, tabId: string, url: string, customTitle?: string) => void;
   goBack: (workspaceId: string, tabId: string) => void;
   goForward: (workspaceId: string, tabId: string) => void;
+  reloadTab: (workspaceId: string, tabId: string) => void;
+  fetchTitleAndFavicon: (workspaceId: string, tabId: string, url: string) => void;
 
   // Proxy helper
   getProxyUrl: (url: string) => string;
@@ -66,6 +83,14 @@ interface BrowserState {
   setSearchEngine: (engine: 'google' | 'duckduckgo' | 'bing') => void;
   setActiveView: (view: 'browser' | 'settings') => void;
   clearAllHistory: () => void;
+  language: 'en' | 'id';
+  setLanguage: (lang: 'en' | 'id') => void;
+  setDownloadPath: (path: string) => void;
+
+  // Downloads
+  addDownload: (item: DownloadItem) => void;
+  updateDownload: (id: string, updates: Partial<DownloadItem>) => void;
+  clearDownloads: () => void;
 
   // Context Menu Actions
   duplicateTab: (workspaceId: string, tabId: string) => void;
@@ -91,9 +116,13 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
   workspacePage: 0,
   searchEngine: 'google',
   activeView: 'browser',
+  language: 'en',
+  downloadPath: '',
+  downloads: [],
 
   setSearchEngine: (engine) => set({ searchEngine: engine }),
   setActiveView: (view) => set({ activeView: view }),
+  setLanguage: (lang) => set({ language: lang }),
   clearAllHistory: () => set((state) => {
     const newTabs = { ...state.tabs };
     for (const wsId in newTabs) {
@@ -105,6 +134,12 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
     }
     return { tabs: newTabs };
   }),
+  setDownloadPath: (path) => set({ downloadPath: path }),
+  addDownload: (item) => set((state) => ({ downloads: [item, ...state.downloads] })),
+  updateDownload: (id, updates) => set((state) => ({
+    downloads: state.downloads.map(d => d.id === id ? { ...d, ...updates } : d)
+  })),
+  clearDownloads: () => set({ downloads: [] }),
 
   initRenderMode: async () => {
     try {
@@ -233,64 +268,171 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
     return { theme: nextTheme };
   }),
 
-  navigateTab: (workspaceId, tabId, url) => set((state) => {
-    if (state.renderMode === 'native') {
-      invoke('navigate_webview', { id: tabId, url }).catch(console.error);
-    }
+  navigateTab: (workspaceId, tabId, url, customTitle) => {
+    set((state) => {
+      if (state.renderMode === 'native') {
+        invoke('navigate_webview', { id: tabId, url }).catch(console.error);
+      }
+      const workspaceTabs = state.tabs[workspaceId] || [];
+      const newTabs = workspaceTabs.map(t => {
+        if (t.id === tabId) {
+          const newHistory = t.history.slice(0, t.historyIndex + 1);
+          newHistory.push(url);
+          
+          let initialTitle = customTitle || url;
+          try {
+            if (!customTitle && url.startsWith('http')) {
+              initialTitle = new URL(url).hostname;
+            }
+          } catch(e) {}
+
+          return { ...t, url, title: initialTitle, history: newHistory, historyIndex: newHistory.length - 1, isLoading: true };
+        }
+        return t;
+      });
+      return { tabs: { ...state.tabs, [workspaceId]: newTabs } };
+    });
+
+    // Try to fetch the real title and favicon in the background via proxy
+    get().fetchTitleAndFavicon(workspaceId, tabId, url);
+  },
+
+  fetchTitleAndFavicon: (workspaceId, tabId, url) => {
+    const proxyUrl = get().getProxyUrl(url);
+    fetch(proxyUrl)
+      .then(res => res.text())
+      .then(html => {
+        const updates: Partial<Tab> = {};
+        
+        // Extract Title
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch && titleMatch[1]) {
+          updates.title = titleMatch[1].trim();
+        }
+
+        // Extract Favicon
+        let faviconUrl: string | undefined = undefined;
+        const iconMatch = html.match(/<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*>/i);
+        if (iconMatch) {
+          const hrefMatch = iconMatch[0].match(/href=["']([^"']+)["']/i);
+          if (hrefMatch && hrefMatch[1]) {
+            faviconUrl = hrefMatch[1];
+            if (!faviconUrl.startsWith('http') && !faviconUrl.startsWith('data:')) {
+              try { faviconUrl = new URL(faviconUrl, url).href; } catch(e) {}
+            }
+          }
+        }
+        // Fallback to /favicon.ico
+        if (!faviconUrl && url.startsWith('http')) {
+          try { faviconUrl = new URL('/favicon.ico', url).href; } catch(e) {}
+        }
+
+        if (faviconUrl) {
+          updates.favicon = faviconUrl;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          get().updateTab(workspaceId, tabId, updates);
+        }
+      })
+      .catch(() => {
+        // On error, still try to guess favicon
+        if (url.startsWith('http')) {
+          try {
+            const fallbackFavicon = new URL('/favicon.ico', url).href;
+            get().updateTab(workspaceId, tabId, { favicon: fallbackFavicon });
+          } catch(e) {}
+        }
+      });
+  },
+
+  reloadTab: (workspaceId, tabId) => set((state) => {
     const workspaceTabs = state.tabs[workspaceId] || [];
     const newTabs = workspaceTabs.map(t => {
       if (t.id === tabId) {
-        const newHistory = t.history.slice(0, t.historyIndex + 1);
-        newHistory.push(url);
-        return { ...t, url, title: url, history: newHistory, historyIndex: newHistory.length - 1, isLoading: true };
+        if (state.renderMode === 'native') {
+          invoke('navigate_webview', { id: tabId, url: t.url }).catch(console.error);
+        }
+        return { ...t, isLoading: true, refreshCount: (t.refreshCount || 0) + 1 };
       }
       return t;
     });
     return { tabs: { ...state.tabs, [workspaceId]: newTabs } };
   }),
 
-  goBack: (workspaceId, tabId) => set((state) => {
-    const workspaceTabs = state.tabs[workspaceId] || [];
-    const newTabs = workspaceTabs.map(t => {
-      if (t.id === tabId && t.historyIndex > 0) {
-        const newIndex = t.historyIndex - 1;
-        const newUrl = t.history[newIndex];
-        if (state.renderMode === 'native') {
-          invoke('navigate_webview', { id: tabId, url: newUrl }).catch(console.error);
+  goBack: (workspaceId, tabId) => {
+    let targetUrl = '';
+    set((state) => {
+      const workspaceTabs = state.tabs[workspaceId] || [];
+      const newTabs = workspaceTabs.map(t => {
+        if (t.id === tabId && t.historyIndex > 0) {
+          const newIndex = t.historyIndex - 1;
+          const newUrl = t.history[newIndex];
+          targetUrl = newUrl;
+          if (state.renderMode === 'native') {
+            invoke('navigate_webview', { id: tabId, url: newUrl }).catch(console.error);
+          }
+          return { 
+            ...t, 
+            url: newUrl, 
+            title: newUrl ? newUrl : '', 
+            favicon: newUrl ? t.favicon : undefined,
+            historyIndex: newIndex, 
+            isLoading: newUrl ? true : false 
+          };
         }
-        return { ...t, url: newUrl, title: newUrl, historyIndex: newIndex, isLoading: true };
-      }
-      return t;
+        return t;
+      });
+      return { tabs: { ...state.tabs, [workspaceId]: newTabs } };
     });
-    return { tabs: { ...state.tabs, [workspaceId]: newTabs } };
-  }),
+    if (targetUrl) {
+      get().fetchTitleAndFavicon(workspaceId, tabId, targetUrl);
+    }
+  },
 
-  goForward: (workspaceId, tabId) => set((state) => {
-    const workspaceTabs = state.tabs[workspaceId] || [];
-    const newTabs = workspaceTabs.map(t => {
-      if (t.id === tabId && t.historyIndex < t.history.length - 1) {
-        const newIndex = t.historyIndex + 1;
-        const newUrl = t.history[newIndex];
-        if (state.renderMode === 'native') {
-          invoke('navigate_webview', { id: tabId, url: newUrl }).catch(console.error);
+  goForward: (workspaceId, tabId) => {
+    let targetUrl = '';
+    set((state) => {
+      const workspaceTabs = state.tabs[workspaceId] || [];
+      const newTabs = workspaceTabs.map(t => {
+        if (t.id === tabId && t.historyIndex < t.history.length - 1) {
+          const newIndex = t.historyIndex + 1;
+          const newUrl = t.history[newIndex];
+          targetUrl = newUrl;
+          if (state.renderMode === 'native') {
+            invoke('navigate_webview', { id: tabId, url: newUrl }).catch(console.error);
+          }
+          return { 
+            ...t, 
+            url: newUrl, 
+            title: newUrl ? newUrl : '', 
+            favicon: newUrl ? t.favicon : undefined,
+            historyIndex: newIndex, 
+            isLoading: newUrl ? true : false 
+          };
         }
-        return { ...t, url: newUrl, title: newUrl, historyIndex: newIndex, isLoading: true };
-      }
-      return t;
+        return t;
+      });
+      return { tabs: { ...state.tabs, [workspaceId]: newTabs } };
     });
-    return { tabs: { ...state.tabs, [workspaceId]: newTabs } };
-  }),
+    if (targetUrl) {
+      get().fetchTitleAndFavicon(workspaceId, tabId, targetUrl);
+    }
+  },
 
   // Workspace management
 
   addWorkspace: (name, accentColor, homepage) => set((state) => {
     const id = `ws_${Date.now()}`;
     const newWorkspace: Workspace = { id, name, accentColor, homepage: homepage || '' };
+    
+    const isUnassignedWithTabs = state.activeWorkspaceId === '' && state.tabs[''] && state.tabs[''].length > 0;
+
     return {
       workspaces: [...state.workspaces, newWorkspace],
       tabs: { ...state.tabs, [id]: [] },
       activeTabIds: { ...state.activeTabIds, [id]: null },
-      activeWorkspaceId: id,
+      activeWorkspaceId: isUnassignedWithTabs ? state.activeWorkspaceId : id,
     };
   }),
 

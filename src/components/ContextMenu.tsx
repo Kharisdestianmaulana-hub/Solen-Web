@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Pin, Move, Trash2, PinOff, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useBrowserStore } from '../store/useBrowserStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface ContextMenuProps {
   x: number;
@@ -16,6 +17,7 @@ export default function ContextMenu({ x, y, isOpen, onClose, tabId }: ContextMen
     workspaces, activeWorkspaceId, tabs, 
     duplicateTab, togglePinTab, closeTab, moveTabToWorkspace 
   } = useBrowserStore();
+  const { t } = useTranslation();
 
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
 
@@ -69,19 +71,19 @@ export default function ContextMenu({ x, y, isOpen, onClose, tabId }: ContextMen
         >
           <MenuItem 
             icon={<Copy size={14} />} 
-            label="Duplicate" 
+            label={t('duplicateTab')} 
             onClick={() => { duplicateTab(activeWorkspaceId, tabId); onClose(); }} 
           />
           <MenuItem 
             icon={tab.isPinned ? <PinOff size={14} /> : <Pin size={14} />} 
-            label={tab.isPinned ? "Unpin Tab" : "Pin Tab"} 
+            label={tab.isPinned ? t('unpinTab') : t('pinTab')} 
             onClick={() => { togglePinTab(activeWorkspaceId, tabId); onClose(); }} 
           />
           
           <div style={{ position: 'relative' }}>
             <MenuItem 
               icon={<Move size={14} />} 
-              label="Move to Workspace" 
+              label={t('moveToWorkspace')} 
               disabled={!canMove}
               onClick={() => {
                 if (canMove) setShowMoveSubmenu(!showMoveSubmenu);
@@ -133,7 +135,7 @@ export default function ContextMenu({ x, y, isOpen, onClose, tabId }: ContextMen
           <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
           <MenuItem 
             icon={<Trash2 size={14} />} 
-            label="Close Tab" 
+            label={t('closeTab')} 
             onClick={() => { closeTab(activeWorkspaceId, tabId); onClose(); }} 
             destructive 
           />

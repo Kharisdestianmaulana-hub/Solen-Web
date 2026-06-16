@@ -3,22 +3,25 @@ import { Settings, Palette, LayoutGrid, Shield, Info, X, Trash2, Pencil, Plus } 
 import { useBrowserStore, Workspace } from '../store/useBrowserStore';
 import WorkspaceModal from './WorkspaceModal';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
+import { open } from '@tauri-apps/plugin-dialog';
 
 type SettingsCategory = 'general' | 'appearance' | 'workspaces' | 'privacy' | 'about';
 
 export default function SettingsPage() {
-  const { setActiveView, searchEngine, setSearchEngine, theme, toggleTheme, workspaces, deleteWorkspace, clearAllHistory } = useBrowserStore();
+  const { setActiveView, searchEngine, setSearchEngine, theme, toggleTheme, workspaces, deleteWorkspace, clearAllHistory, language, setLanguage, downloadPath, setDownloadPath } = useBrowserStore();
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('general');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | undefined>();
 
   const categories = [
-    { id: 'general', icon: Settings, label: 'Umum' },
-    { id: 'appearance', icon: Palette, label: 'Tampilan' },
-    { id: 'workspaces', icon: LayoutGrid, label: 'Workspace' },
-    { id: 'privacy', icon: Shield, label: 'Privasi & Keamanan' },
-    { id: 'about', icon: Info, label: 'Tentang' },
+    { id: 'general', icon: Settings, label: t('general') },
+    { id: 'appearance', icon: Palette, label: t('appearance') },
+    { id: 'workspaces', icon: LayoutGrid, label: t('workspaces') },
+    { id: 'privacy', icon: Shield, label: t('privacySecurity') },
+    { id: 'about', icon: Info, label: t('about') },
   ] as const;
 
   const renderContent = () => {
@@ -30,13 +33,24 @@ export default function SettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="settings-section"
           >
-            <h2>Pengaturan Umum</h2>
+            <h2>{t('general')}</h2>
             
             <div className="settings-group">
               <div className="settings-item">
                 <div className="settings-item-text">
-                  <h3>Mesin Pencari Default</h3>
-                  <p>Pilih mesin pencari yang digunakan saat Anda mengetik di Address Bar.</p>
+                  <h3>{t('language')}</h3>
+                  <p>{t('languageDesc')}</p>
+                </div>
+                <div className="settings-options" style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => setLanguage('en')} className={`settings-btn ${language === 'en' ? 'active' : ''}`}>English</button>
+                  <button onClick={() => setLanguage('id')} className={`settings-btn ${language === 'id' ? 'active' : ''}`}>Indonesia</button>
+                </div>
+              </div>
+
+              <div className="settings-item">
+                <div className="settings-item-text">
+                  <h3>{t('defaultSearchEngine')}</h3>
+                  <p>{t('searchEngineDesc')}</p>
                 </div>
                 <div className="settings-options" style={{ display: 'flex', gap: '8px' }}>
                   {(['google', 'duckduckgo', 'bing'] as const).map(engine => (
@@ -50,6 +64,44 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+
+              <div className="settings-item">
+                <div className="settings-item-text">
+                  <h3>{t('defaultDownloadLocation')}</h3>
+                  <p>{t('defaultDownloadLocationDesc')}</p>
+                  {downloadPath && (
+                    <p style={{ marginTop: '8px', fontSize: '13px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                      {downloadPath}
+                    </p>
+                  )}
+                </div>
+                <div className="settings-options" style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const selected = await open({ directory: true, multiple: false });
+                        if (selected && typeof selected === 'string') {
+                          setDownloadPath(selected);
+                        }
+                      } catch (err) {
+                        console.error('Failed to pick directory:', err);
+                      }
+                    }} 
+                    className="settings-btn"
+                  >
+                    {t('changeLocation')}
+                  </button>
+                  {downloadPath && (
+                    <button 
+                      onClick={() => setDownloadPath('')} 
+                      className="settings-btn" 
+                      style={{ color: '#c75c5c' }}
+                    >
+                      {t('alwaysAskDownload')}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
         );
@@ -61,25 +113,25 @@ export default function SettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="settings-section"
           >
-            <h2>Tampilan</h2>
+            <h2>{t('appearance')}</h2>
             <div className="settings-group">
               <div className="settings-item">
                 <div className="settings-item-text">
-                  <h3>Tema Aplikasi</h3>
-                  <p>Pilih tema visual untuk Solen.</p>
+                  <h3>{t('appTheme')}</h3>
+                  <p>{t('appThemeDesc')}</p>
                 </div>
                 <div className="settings-options" style={{ display: 'flex', gap: '8px' }}>
                   <button 
                     onClick={() => theme === 'light' && toggleTheme()} 
                     className={`settings-btn ${theme === 'dark' ? 'active' : ''}`}
                   >
-                    Gelap
+                    {t('dark')}
                   </button>
                   <button 
                     onClick={() => theme === 'dark' && toggleTheme()} 
                     className={`settings-btn ${theme === 'light' ? 'active' : ''}`}
                   >
-                    Terang
+                    {t('light')}
                   </button>
                 </div>
               </div>
@@ -95,7 +147,7 @@ export default function SettingsPage() {
             className="settings-section"
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-              <h2 style={{ margin: 0 }}>Manajemen Workspace</h2>
+              <h2 style={{ margin: 0 }}>{t('workspaceManagement')}</h2>
               <button
                 onClick={() => {
                   setModalMode('create');
@@ -106,7 +158,7 @@ export default function SettingsPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 <Plus size={16} />
-                Buat Baru
+                {t('createNew')}
               </button>
             </div>
             
@@ -117,7 +169,7 @@ export default function SettingsPage() {
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: ws.accentColor }} />
                     <div>
                       <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', color: 'var(--text-primary)' }}>{ws.name}</h3>
-                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{ws.homepage || 'Beranda bawaan'}</p>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{ws.homepage || t('defaultHomepage')}</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -129,19 +181,19 @@ export default function SettingsPage() {
                       }}
                       className="icon-button"
                       style={{ padding: '8px', color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                      title="Edit"
+                      title={t('editWorkspace')}
                     >
                       <Pencil size={16} />
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Hapus workspace "${ws.name}"? Semua tab di dalamnya akan tertutup.`)) {
+                        if (confirm(t('deleteWorkspaceConfirm', { name: ws.name }))) {
                           deleteWorkspace(ws.id);
                         }
                       }}
                       className="icon-button"
                       style={{ padding: '8px', color: '#c75c5c', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                      title="Hapus"
+                      title={t('deleteTab')}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -150,7 +202,7 @@ export default function SettingsPage() {
               ))}
               {workspaces.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                  Belum ada workspace.
+                  {t('noWorkspaces')}
                 </div>
               )}
             </div>
@@ -164,29 +216,29 @@ export default function SettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="settings-section"
           >
-            <h2>Privasi & Keamanan</h2>
+            <h2>{t('privacySecurity')}</h2>
             <div className="settings-group">
               <div className="settings-item">
                 <div className="settings-item-text">
-                  <h3>Hapus Riwayat Penelusuran</h3>
-                  <p>Menghapus riwayat tab yang sedang terbuka di semua workspace.</p>
+                  <h3>{t('clearBrowsingData')}</h3>
+                  <p>{t('clearBrowsingDataDesc')}</p>
                 </div>
                 <button
                   onClick={() => {
                     clearAllHistory();
-                    alert('Riwayat penelusuran berhasil dihapus!');
+                    alert(t('clearDataSuccess'));
                   }}
                   className="settings-btn"
                   style={{ color: '#c75c5c', borderColor: 'rgba(199, 92, 92, 0.3)' }}
                 >
-                  Hapus Data
+                  {t('clearData')}
                 </button>
               </div>
 
               <div className="settings-item">
                 <div className="settings-item-text">
-                  <h3>Kirim permintaan "Do Not Track"</h3>
-                  <p>Meminta situs web untuk tidak melacak aktivitas Anda. (Fitur placeholder)</p>
+                  <h3>{t('doNotTrack')}</h3>
+                  <p>{t('doNotTrackDesc')}</p>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input type="checkbox" style={{ accentColor: 'var(--accent-dev)', width: '18px', height: '18px' }} />
@@ -203,7 +255,7 @@ export default function SettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="settings-section"
           >
-            <h2>Tentang Solen</h2>
+            <h2>{t('aboutSolen')}</h2>
             <div className="settings-group">
               <div style={{ textAlign: 'center', padding: '40px 0', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1.5px solid var(--border-subtle)' }}>
                 <h1 style={{ 
@@ -213,14 +265,14 @@ export default function SettingsPage() {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}>
-                  Solen
+                  {t('appTitle')}
                 </h1>
-                <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 500 }}>Versi 0.1.0 (Alpha)</p>
-                <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Browser masa depan berbasis agen cerdas.</p>
+                <p style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 500 }}>{t('version')}</p>
+                <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>{t('aboutDesc')}</p>
                 
                 <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: '16px' }}>
                   <button className="settings-btn active">
-                    Periksa Pembaruan
+                    {t('checkForUpdates')}
                   </button>
                   <button className="settings-btn" onClick={() => window.open('https://github.com', '_blank')}>
                     GitHub
@@ -228,7 +280,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-                © 2026 Solen Browser. Hak cipta dilindungi.
+                {t('copyright')}
               </p>
             </div>
           </motion.div>
@@ -254,7 +306,7 @@ export default function SettingsPage() {
         backgroundColor: 'var(--bg-secondary)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', padding: '0 8px' }}>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>Pengaturan</h1>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>{t('settings')}</h1>
           <button 
             onClick={() => setActiveView('browser')}
             style={{

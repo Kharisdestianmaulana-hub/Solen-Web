@@ -1,7 +1,7 @@
 // ============================================================
 // Solen Browser — Dual-Mode Backend
-// 
-// macOS  → Native WKWebView via add_child() 
+//
+// macOS  → Native WKWebView via add_child()
 // Linux  → Local proxy server + iframe
 // ============================================================
 
@@ -22,7 +22,7 @@ fn get_render_mode() -> &'static str {
 mod native {
     use std::collections::HashMap;
     use std::sync::Mutex;
-    use tauri::{Manager, WebviewBuilder, WebviewUrl, LogicalPosition, LogicalSize, Webview};
+    use tauri::{LogicalPosition, LogicalSize, Manager, Webview, WebviewBuilder, WebviewUrl};
 
     pub struct WebviewState {
         pub webviews: Mutex<HashMap<String, Webview>>,
@@ -190,6 +190,33 @@ mod proxy {
             .unwrap_or("")
             .to_string();
 
+        let content_disposition = resp_headers
+            .get("content-disposition")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let is_download = content_disposition.contains("attachment") ||
+            content_type == "application/octet-stream" ||
+            content_type == "application/x-msdownload" ||
+            content_type == "application/zip";
+
+        if is_download {
+            let filename = extract_filename(&url, &content_disposition);
+            let inject = format!(
+                r#"<script>
+window.parent.postMessage({{ type: 'solen-download-start', url: '{}', filename: '{}' }}, '*');
+history.back();
+</script>"#,
+                url, filename
+            );
+            return Ok(warp::http::Response::builder()
+                .header("Content-Type", "text/html")
+                .header("Access-Control-Allow-Origin", "*")
+                .body(inject.into_bytes())
+                .unwrap());
+        }
+
         let body_bytes = response
             .bytes()
             .await
@@ -226,7 +253,11 @@ document.addEventListener('click', function(e) {{
   var a = e.target.closest('a');
   if (a && a.href && !a.href.startsWith('javascript:') && !a.href.startsWith('#')) {{
     e.preventDefault();
-    window.parent.postMessage({{ type: 'solen-navigate', url: a.href }}, '*');
+    if (a.target === '_blank') {{
+      window.parent.postMessage({{ type: 'solen-new-tab', url: a.href }}, '*');
+    }} else {{
+      window.parent.postMessage({{ type: 'solen-navigate', url: a.href }}, '*');
+    }}
   }}
 }}, true);
 window.addEventListener('submit', function(e) {{
@@ -272,6 +303,29 @@ window.addEventListener('submit', function(e) {{
         format!("{}/", url)
     }
 
+    fn extract_filename(url: &str, content_disposition: &str) -> String {
+        if let Some(idx) = content_disposition.find("filename=") {
+            let part = &content_disposition[idx + 9..];
+            let part = part.trim_matches(|c| c == '"' || c == '\'');
+            if let Some(end) = part.find(';') {
+                return part[..end].to_string();
+            }
+            return part.to_string();
+        }
+        
+        // Fallback to URL path
+        if let Ok(parsed) = url::Url::parse(url) {
+            if let Some(segments) = parsed.path_segments() {
+                if let Some(last) = segments.last() {
+                    if !last.is_empty() {
+                        return last.to_string();
+                    }
+                }
+            }
+        }
+        "downloaded_file".to_string()
+    }
+
     #[tauri::command]
     pub fn get_proxy_port() -> u16 {
         PORT
@@ -286,6 +340,9 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     {
         tauri::Builder::default()
+            .plugin(tauri_plugin_upload::init())
+            .plugin(tauri_plugin_fs::init())
+            .plugin(tauri_plugin_dialog::init())
             .plugin(tauri_plugin_opener::init())
             .manage(native::WebviewState::new())
             .invoke_handler(tauri::generate_handler![
@@ -305,6 +362,9 @@ pub fn run() {
     #[cfg(target_os = "linux")]
     {
         tauri::Builder::default()
+            .plugin(tauri_plugin_upload::init())
+            .plugin(tauri_plugin_fs::init())
+            .plugin(tauri_plugin_dialog::init())
             .plugin(tauri_plugin_opener::init())
             .setup(|_app| {
                 proxy::start_server();

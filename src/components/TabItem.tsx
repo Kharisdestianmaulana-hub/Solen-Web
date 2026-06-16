@@ -2,6 +2,7 @@ import { X, Globe, Loader2 } from 'lucide-react';
 import { useBrowserStore, Tab } from '../store/useBrowserStore';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface TabItemProps {
   tab: Tab;
@@ -13,6 +14,9 @@ interface TabItemProps {
 export default function TabItem({ tab, isCompact, isActive, workspaceAccent }: TabItemProps) {
   const { setActiveTab, closeTab, activeWorkspaceId } = useBrowserStore();
   const [isHovered, setIsHovered] = useState(false);
+  const { t } = useTranslation();
+
+  const displayTitle = tab.title || t('newTab');
 
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -24,7 +28,7 @@ export default function TabItem({ tab, isCompact, isActive, workspaceAccent }: T
       onClick={() => setActiveTab(activeWorkspaceId, tab.id)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      title={tab.title}
+      title={displayTitle}
       style={{
         height: 'var(--space-8)',
         padding: 'var(--space-1) var(--space-2)',
@@ -65,7 +69,7 @@ export default function TabItem({ tab, isCompact, isActive, workspaceAccent }: T
           textOverflow: 'ellipsis',
           fontSize: '0.9em'
         }}>
-          {tab.title}
+          {displayTitle}
         </span>
       )}
 

@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Pencil } from 'lucide-react';
 import { useBrowserStore, WORKSPACES_PER_PAGE, Workspace } from '../store/useBrowserStore';
-import WorkspaceModal from './WorkspaceModal';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface WorkspaceSelectorProps {
   isCompact: boolean;
+  onEditWorkspace: (ws: Workspace) => void;
 }
 
-export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps) {
+export default function WorkspaceSelector({ isCompact, onEditWorkspace }: WorkspaceSelectorProps) {
   const {
     workspaces,
     activeWorkspaceId,
@@ -16,15 +17,11 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
     workspacePage,
     setWorkspacePage
   } = useBrowserStore();
+  const { t } = useTranslation();
 
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | undefined>(undefined);
-
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, isOpen: boolean, workspaceId: string | null }>({ x: 0, y: 0, isOpen: false, workspaceId: null });
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -56,16 +53,8 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
     setContextMenu({ x: e.clientX, y: e.clientY, isOpen: true, workspaceId });
   };
 
-  const openCreateModal = () => {
-    setModalMode('create');
-    setEditingWorkspace(undefined);
-    setIsModalOpen(true);
-  };
-
   const openEditModal = (workspace: Workspace) => {
-    setModalMode('edit');
-    setEditingWorkspace(workspace);
-    setIsModalOpen(true);
+    onEditWorkspace(workspace);
     setContextMenu(prev => ({ ...prev, isOpen: false }));
   };
 
@@ -87,7 +76,7 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
     return (
       <div style={{ display: 'flex', justifyContent: isCompact ? 'center' : 'flex-start', marginBottom: 'var(--space-4)' }}>
         <button
-          onClick={openCreateModal}
+          onClick={() => useBrowserStore.getState().addTab(activeWorkspaceId || '')}
           style={{
             width: '28px',
             height: '28px',
@@ -101,16 +90,10 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
             cursor: 'pointer',
             transition: 'all 0.1s ease',
           }}
-          title="Buat Workspace"
+          title={`${t('newTab')} (Cmd+T)`}
         >
           <Plus size={16} />
         </button>
-        <WorkspaceModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          mode={modalMode} 
-          workspace={editingWorkspace} 
-        />
       </div>
     );
   }
@@ -133,7 +116,7 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
           onMouseLeave={() => setPressedId(null)}
           onClick={() => isCompactView ? handleCycleWorkspace() : switchWorkspace(ws.id)}
           onContextMenu={(e) => !isCompactView && handleContextMenu(e, ws.id)}
-          title={isCompactView ? `Workspace: ${ws.name} (Click to cycle)` : ws.name}
+          title={isCompactView ? t('workspaceCycle', { name: ws.name }) : ws.name}
           style={{
             width: '28px',
             height: '28px',
@@ -177,7 +160,7 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
               padding: 0,
               zIndex: 2,
             }}
-            title="Hapus Workspace"
+            title={t('deleteWorkspace')}
           >
             <X size={10} />
           </button>
@@ -221,7 +204,7 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
             )}
 
             <button
-              onClick={openCreateModal}
+              onClick={() => useBrowserStore.getState().addTab(activeWorkspaceId || '')}
               style={{
                 width: '28px',
                 height: '28px',
@@ -235,7 +218,7 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
                 cursor: 'pointer',
                 transition: 'all 0.1s ease',
               }}
-              title="Buat Workspace"
+              title={`${t('newTab')} (Cmd+T)`}
             >
               <Plus size={16} />
             </button>
@@ -277,30 +260,14 @@ export default function WorkspaceSelector({ isCompact }: WorkspaceSelectorProps)
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <Pencil size={14} /> Edit
+            <Pencil size={14} /> {t('edit')}
           </button>
-          <button
-            onClick={() => handleDelete(contextMenu.workspaceId!)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              width: '100%', padding: '6px 8px', background: 'transparent', border: 'none',
-              color: 'var(--accent-alert)', cursor: 'pointer', borderRadius: '4px',
-              fontSize: '13px', textAlign: 'left'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <X size={14} /> Hapus
+          <button onClick={() => handleDelete(contextMenu.workspaceId!)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: 'var(--accent-alert)', width: '100%', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <X size={14} />
+            {t('delete')}
           </button>
         </div>
       )}
-
-      <WorkspaceModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        mode={modalMode} 
-        workspace={editingWorkspace} 
-      />
     </>
   );
 }

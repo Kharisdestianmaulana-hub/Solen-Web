@@ -116,7 +116,7 @@ body, html {
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
-  alignItems: center;
+  align-items: center;
   justify-content: center;
   padding: var(--space-1);
   border-radius: 6px;

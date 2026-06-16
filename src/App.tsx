@@ -2,8 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Sidebar from "./components/Sidebar";
 import AddressBar from "./components/AddressBar";
 import SettingsPage from "./components/SettingsPage";
+import DownloadManager from "./components/DownloadManager";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { useBrowserStore } from "./store/useBrowserStore";
+import { useTranslation } from "./hooks/useTranslation";
+import { useDownloadManager } from "./hooks/useDownloadManager";
 
 function App() {
   const [isCompact, setIsCompact] = useState(false);
@@ -11,9 +14,11 @@ function App() {
 
   const { 
     activeWorkspaceId, activeTabIds, tabs, 
-    renderMode, getProxyUrl, 
+    renderMode, getProxyUrl, addTab,
     navigateTab, updateTab, setContentRect, initRenderMode, searchEngine, activeView 
   } = useBrowserStore();
+  const { t } = useTranslation();
+  const { startDownload } = useDownloadManager();
   
   const activeTabId = activeTabIds[activeWorkspaceId];
   const activeTab = tabs[activeWorkspaceId]?.find(t => t.id === activeTabId);
@@ -30,8 +35,12 @@ function App() {
   const handleMessage = useCallback((e: MessageEvent) => {
     if (e.data?.type === 'solen-navigate' && e.data.url && activeTabId) {
       navigateTab(activeWorkspaceId, activeTabId, e.data.url);
+    } else if (e.data?.type === 'solen-new-tab' && e.data.url) {
+      addTab(activeWorkspaceId, e.data.url);
+    } else if (e.data?.type === 'solen-download-start' && e.data.url) {
+      startDownload(e.data.url, e.data.filename || 'download');
     }
-  }, [activeWorkspaceId, activeTabId, navigateTab]);
+  }, [activeWorkspaceId, activeTabId, navigateTab, startDownload, addTab]);
 
   useEffect(() => {
     if (renderMode !== 'proxy') return;
@@ -77,7 +86,12 @@ function App() {
         <SettingsPage />
       ) : (
         <main className="webview-panel" style={{ flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
-          <AddressBar />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <AddressBar />
+            </div>
+            <DownloadManager />
+          </div>
           
           <div 
             ref={contentRef}
@@ -86,7 +100,7 @@ function App() {
           {/* Proxy Mode: render iframe */}
           {renderMode === 'proxy' && activeTab && activeTab.url && (
             <iframe
-              key={activeTab.url}
+              key={`${activeTab.url}-${activeTab.refreshCount || 0}`}
               src={getProxyUrl(activeTab.url)}
               onLoad={handleIframeLoad}
               style={{
@@ -148,15 +162,21 @@ function App() {
                 </svg>
                 <input 
                   type="text" 
-                  placeholder={`Telusuri ${searchEngine === 'google' ? 'Google' : searchEngine === 'bing' ? 'Bing' : 'DuckDuckGo'} atau ketik URL...`}
+                  placeholder={
+                    searchEngine === 'google' ? t('searchGoogleOrUrl') : 
+                    searchEngine === 'bing' ? t('searchBingOrUrl') : 
+                    t('searchDuckDuckGoOrUrl')
+                  }
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const val = e.currentTarget.value;
                       if (!val) return;
                       let finalUrl = val;
+                      let finalTitle: string | undefined = undefined;
                       if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
                         if (finalUrl.includes(' ') || !finalUrl.includes('.')) {
+                          finalTitle = val;
                           if (searchEngine === 'duckduckgo') {
                             finalUrl = `https://duckduckgo.com/?q=${encodeURIComponent(finalUrl)}`;
                           } else if (searchEngine === 'bing') {
@@ -168,7 +188,7 @@ function App() {
                           finalUrl = `https://${finalUrl}`;
                         }
                       }
-                      navigateTab(activeWorkspaceId, activeTab.id, finalUrl);
+                      navigateTab(activeWorkspaceId, activeTab.id, finalUrl, finalTitle);
                     }
                   }}
                   style={{
@@ -191,7 +211,7 @@ function App() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', 
               color: 'var(--text-muted)', fontSize: '14px',
             }}>
-              Tidak ada tab yang dipilih
+              {t('noTabSelected')}
             </div>
           )}
         </div>

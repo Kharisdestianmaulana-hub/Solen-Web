@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check } from 'lucide-react';
 import { Workspace, useBrowserStore } from '../store/useBrowserStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 const ACCENT_COLORS = [
   '#6B8299',
@@ -23,6 +24,7 @@ interface WorkspaceModalProps {
 
 export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: WorkspaceModalProps) {
   const { addWorkspace, editWorkspace } = useBrowserStore();
+  const { t } = useTranslation();
 
   const [name, setName] = useState('');
   const [accentColor, setAccentColor] = useState(ACCENT_COLORS[0]);
@@ -117,7 +119,7 @@ export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: Wor
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.01em',
               }}>
-                {mode === 'create' ? 'Workspace Baru' : 'Edit Workspace'}
+                {mode === 'create' ? t('createWorkspace') : t('editWorkspace')}
               </h2>
               <button
                 onClick={onClose}
@@ -148,14 +150,14 @@ export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: Wor
                 color: 'var(--text-secondary)',
                 letterSpacing: '0.02em',
               }}>
-                Nama Workspace
+                {t('workspaceName')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, 20))}
                 maxLength={20}
-                placeholder="e.g. Research"
+                placeholder={t('workspaceNamePlaceholder')}
                 autoFocus
                 style={{
                   background: 'var(--bg-tertiary)',
@@ -187,7 +189,7 @@ export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: Wor
                 color: 'var(--text-secondary)',
                 letterSpacing: '0.02em',
               }}>
-                Warna Aksen
+                {t('accentColor')}
               </label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {ACCENT_COLORS.map((color) => {
@@ -228,13 +230,13 @@ export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: Wor
                 color: 'var(--text-secondary)',
                 letterSpacing: '0.02em',
               }}>
-                Homepage
+                {t('homepageUrl')}
               </label>
               <input
                 type="url"
                 value={homepage}
                 onChange={(e) => setHomepage(e.target.value)}
-                placeholder="https://google.com"
+                placeholder={t('homepagePlaceholder')}
                 style={{
                   background: 'var(--bg-tertiary)',
                   border: '1.5px solid var(--border-subtle)',
@@ -274,7 +276,7 @@ export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: Wor
                   e.currentTarget.style.color = 'var(--text-secondary)';
                 }}
               >
-                Batal
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSubmit}
@@ -298,7 +300,7 @@ export default function WorkspaceModal({ isOpen, onClose, mode, workspace }: Wor
                   if (canSubmit) e.currentTarget.style.opacity = '1';
                 }}
               >
-                {mode === 'create' ? 'Buat Workspace' : 'Simpan'}
+                {mode === 'create' ? t('createWorkspace') : t('save')}
               </button>
             </div>
           </motion.div>
