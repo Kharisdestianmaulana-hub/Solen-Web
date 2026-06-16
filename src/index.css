@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Default Theme: Dark */
+  --bg-primary: #1C1B1A;
+  --bg-secondary: #262522;
+  --bg-tertiary: #33312E;
+  
+  --text-primary: #E8E6E1;
+  --text-secondary: #A39F96;
+  --text-muted: #736F67;
+  
+  --accent-dev: #6B8299;
+  --accent-research: #8A9A86;
+  --accent-media: #DAB654;
+  --accent-alert: #D9735D;
+  
+  --border-main: #45423D;
+  --border-subtle: #3A3733;
+  --shadow-solid: #000000;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+.light {
+  /* Light Theme Overrides */
+  --bg-primary: #F3F2EB;
+  --bg-secondary: #FAF9F6;
+  --bg-tertiary: #EAE8DE;
+  
+  --text-primary: #2D2C28;
+  --text-secondary: #5C5750;
+  --text-muted: #8C867C;
+  
+  --border-main: #2D2C28;
+  --border-subtle: #E3E1D5;
+  --shadow-solid: #2D2C28;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  background-color: var(--bg-primary);
+  height: 100%;
+  width: 100%;
+}
+
+/* Layout Utilities */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-primary);
+}
+
+.webview-panel {
+  flex: 1;
+  background-color: var(--bg-primary);
+  border-left: 2px solid var(--border-main);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: border-color 0.3s ease;
+}
+
+/* Sidebar Utilities */
+.sidebar-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  border-right: 2px solid var(--border-main);
+  padding: var(--space-3);
+  height: 100%;
+  position: relative;
+  z-index: 10;
+  transition: border-color 0.3s ease;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  height: 32px;
+}
+
+.sidebar-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.icon-button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  alignItems: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
